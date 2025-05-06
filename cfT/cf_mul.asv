@@ -383,10 +383,10 @@ fid=fopen(filename,'w');
 l1='# Test data for ascii data compositional initial conditions.';
 l2='# Only next line is parsed in format: [nx] [ny] because of keyword "POINTS:"';
 fprintf(fid,'%s\n',l1,l2,l3);
-% fprintf(fid, '%6.0f\t', compfdata);
+fprintf(fid, '%6.0f\t', compfdata);
 fclose(fid);
 %dlmwrite(filename,compfdata,'-append','delimiter','\t','precision','%8.6f');
-dlmwrite(filename,compfdata,'-append','delimiter','\t','precision','%6.0f');
+%dlmwrite(filename,compfdata,'-append','delimiter','\t','precision','%6.0f');
 %writematrix(compfdata, filename, 'Delimiter', '\t', 'WriteMode', 'append', 'Format', '%6.0f');
 
 %
@@ -424,12 +424,11 @@ for i = data_indices
     if i <= CFnum
         filename = strcat(data_tempdir, file_prefixes{i}, '.txt');
         fprintf('--Saving data to %s--\n', filename);
-        
+        fid = fopen
         %writematrix(c_coord{i}, filename, 'Delimiter', '\t', 'WriteMode', 'overwrite');
         dlmwrite(filename,c_coord{i},'delimiter','\t','precision','%8.6f');
     else
         filename = strcat(data_tempdir, file_prefixes{i}, '.txt');
-        fprintf('--Saving data to %s--\n', filename);
         %writematrix(c_coord2{i-22}, filename, 'Delimiter', '\t', 'WriteMode', 'overwrite');
         dlmwrite(filename,c_coord2{i-CFnum},'delimiter','\t','precision','%8.6f');
     end

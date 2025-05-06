@@ -1,5 +1,5 @@
 function [] = T_mul(X,Y,data_dir,data_tempdir,l3)
-% Hailong Liu, 20250428
+% 20200903, liumengxue-THU, 
 % 2.Calculate Temperature structure.
 % continent-ocean-arc(microcontinent)-ocean-continent
 % Top = 0 Celsius, 
@@ -101,45 +101,43 @@ fprintf('== Done! == ...\n');
 %
 %---- Right continental plate (South Sea) ------
 %% ====== if SS is ocean, comment these section=======
-filenamecp1_r=strcat(data_tempdir,'C11-right continental upper crust.txt');
-cplate1_r=load(filenamecp1_r);   % 
-filenamecp2_r=strcat(data_tempdir,'C12-right continental lower crust.txt');
-cplate2_r=load(filenamecp2_r);   % 
-filename3_r=strcat(data_tempdir,'C13-right continental lithospheric mantle.txt');
-cplate3_r=load(filename3_r);     % 
-filename4_r=strcat(data_tempdir,'C14-vertical weak zone.txt');
-cplate4_r=load(filename4_r);     % 
-cplate_r = [cplate1_r,cplate2_r,cplate3_r,cplate4_r];  % 
-% Input Parameters
-k_cr  = [2.5,2.5];        % Thermal conductivity
-dz_cr = [35.e3,85.e3];    % Layer thickness (m), curst, lithospheric mantle
-A_cr  = [1.e-6,0.];       % Radiogenic heat production (W/m^3)
-Tt_c  = [273.,823.];      % Temperature at top of layer(K)
-Tb_cr = [823.,1573];      % Temperature at base of layer(K)
-qt_cr = [0.,0.];          % Heat flow at top of layer
-qb_cr = [0.,0.];          % Heat flow at base of layer
-% 
-qt_cr(1) = ( Tb_cr(1) - Tt_c(1) + (A_cr(1)*dz_cr(1)^2)/(2.*k_cr(1)) )*k_cr(1)/dz_cr(1);       
-qb_cr(1) = qt_cr(1) - A_cr(1)*dz_cr(1);  % crustal basal heat flow
-qt_cr(2) = qb_cr(1);                   % top lithospheric mantle heat flow 
-% Determine lithospheric mantle thermal conductivity
-k_cr(2)=(qt_cr(2)*dz_cr(2) - 0.5*A_cr(2)*dz_cr(2)^2)/(Tb_cr(2)-Tt_c(2));
-% Determine lithosphere mantle basal heat flow # 
-qb_cr(2) = qt_cr(2) - A_cr(2)*dz_cr(2);
-% change depth to: bottom, y=max(Y);
-%                  top, y=0;
-z_cr = ysize*ones(1,length(cplate1_r)+length(cplate2_r)+length(cplate3_r)+length(cplate4_r))-cplate_r(2,:); %z:depth,change surface z=600km to z=0;
-[m_cr,n_cr]=size(z_cr);
-for i=1:n_cr
-    if z_cr(i)<=dz_cr(1)
-       t_cr(i) = Tt_c(1) + (qt_cr(1)/k_cr(1))*z_cr(i) - (A_cr(1)*(z_cr(i)^2))/(2*k_cr(1));
-    else
-       t_cr(i) = Tt_c(2) + (qt_cr(2)/k_cr(2))*(z_cr(i)-dz_cr(1)) - (A_cr(2)*((z_cr(i)-dz_cr(1))^2))/(2*k_cr(2)); 
-    end
-end
-cplateT=[cplate_l,cplate_m,cplate_r;t_cl,t_cm,t_cr];
+% filenamecp1_r=strcat(data_tempdir,'C11-right continental upper crust.txt');
+% cplate1_r=load(filenamecp1_r);   % 
+% filenamecp2_r=strcat(data_tempdir,'C12-right continental lower crust.txt');
+% cplate2_r=load(filenamecp2_r);   % 
+% filename3_r=strcat(data_tempdir,'C13-right continental lithospheric mantle.txt');
+% cplate3_r=load(filename3_r);     % 
+% cplate_r = [cplate1_r,cplate2_r,cplate3_r];  % 
+% % Input Parameters
+% k_cr  = [2.5,2.5];        % Thermal conductivity
+% dz_cr = [35.e3,85.e3];    % Layer thickness (m), curst, lithospheric mantle
+% A_cr  = [1.e-6,0.];       % Radiogenic heat production (W/m^3)
+% Tt_c  = [273.,823.];      % Temperature at top of layer(K)
+% Tb_cr = [823.,1573];      % Temperature at base of layer(K)
+% qt_cr = [0.,0.];          % Heat flow at top of layer
+% qb_cr = [0.,0.];          % Heat flow at base of layer
+% % 
+% qt_cr(1) = ( Tb_cr(1) - Tt_c(1) + (A_cr(1)*dz_cr(1)^2)/(2.*k_cr(1)) )*k_cr(1)/dz_cr(1);       
+% qb_cr(1) = qt_cr(1) - A_cr(1)*dz_cr(1);  % crustal basal heat flow
+% qt_cr(2) = qb_cr(1);                   % top lithospheric mantle heat flow 
+% % Determine lithospheric mantle thermal conductivity
+% k_cr(2)=(qt_cr(2)*dz_cr(2) - 0.5*A_cr(2)*dz_cr(2)^2)/(Tb_cr(2)-Tt_c(2));
+% % Determine lithosphere mantle basal heat flow # 
+% qb_cr(2) = qt_cr(2) - A_cr(2)*dz_cr(2);
+% % change depth to: bottom, y=max(Y);
+% %                  top, y=0;
+% z_cr = ysize*ones(1,length(cplate1_r)+length(cplate2_r)+length(cplate3_r))-cplate_r(2,:); %z:depth,change surface z=600km to z=0;
+% [m_cr,n_cr]=size(z_cr);
+% for i=1:n_cr
+%     if z_cr(i)<=dz_cr(1)
+%        t_cr(i) = Tt_c(1) + (qt_cr(1)/k_cr(1))*z_cr(i) - (A_cr(1)*(z_cr(i)^2))/(2*k_cr(1));
+%     else
+%        t_cr(i) = Tt_c(2) + (qt_cr(2)/k_cr(2))*(z_cr(i)-dz_cr(1)) - (A_cr(2)*((z_cr(i)-dz_cr(1))^2))/(2*k_cr(2)); 
+%     end
+% end
+% cplateT=[cplate_l,cplate_m,cplate_r;t_cl,t_cm,t_cr];
 %% ==========================================================
-% cplateT=[cplate_l,cplate_m;t_cl,t_cm];
+cplateT=[cplate_l,cplate_m;t_cl,t_cm];
 filenameopT=strcat(data_tempdir,'T of continental plate.txt');
 dlmwrite(filenameopT,cplateT,'delimiter','\t','precision','%8.6f');
 %
@@ -187,43 +185,43 @@ fprintf('== Done! == ...\n');
 %% ==============================================================
 %======== T of South Sea oceanic plate ================
 % If SS is cotinent, comment this section 
-% fprintf('==Temperature of South Sea Oceanic Plate ...\n');
-% fprintf('== Done! == ...\n');
-% filenameop5=strcat(data_tempdir,'C11-south sea sedment.txt');
-% ocean5=load(filenameop5);  %
-% filenameop6=strcat(data_tempdir,'C12-south sea crust.txt');
-% ocean6=load(filenameop6);  % 
-% filenameop7=strcat(data_tempdir,'C13-south sea lithospheric mantle.txt');
-% ocean7=load(filenameop7);  % 
-% filenameop8=strcat(data_tempdir,'C14-vertical weak zone.txt');
-% ocean8=load(filenameop8);  %
-% ssocean = [ocean5,ocean6,ocean7,ocean8]; %
-% % Input Parameters
-% kss  = [2.5,83.2]; % Thermal conductivity
-% dzss = [60.e3,0];  % oceanic thickness(m)(sediment+crust+lithospheric mantle)
-% Ttss = [273.,1573];% Temperature at top of layer(K)
-% Tbss = [1573.,0];  % Temperature at base of layer(K)
-% agess= 70;                 % Age of the oceanic plate(Ma:Million year)
-% rhoss= [2900,3370];        % Density (kg/m^3)
-% cpss = [750,750];          % Specific heat(J/kg*K)
-% % 
-% age_s_ss=agess*1.e6*365*24*60*60; % change unit 'Ma' into 's(second)';
-% kaiss= kss./(rhoss.*cpss); 
-% %  
-% % z:depth,change surface z=600km to z=0; 
-% % change depth to: bottom, y=max(Y);
-% %                  top, y=0;
-% zss = ysize*ones(1,length(ocean5)+length(ocean6)+length(ocean7)+...
-%     length(ocean8))-ssocean(2,:);
-% zmaxss=max(zss);
-% zminss=min(zss);
-% [mss,nss]=size(zss);      %
-% bdepss =zss(nss);         % depth of model
-% for i=1:nss
-%        %Tdep(i) = Tt(1)+(Tb(1)-Tt(1))*erf(z(i)/(2*sqrt(kai(1)*age_s)));     
-%        Tdepss(i) = Ttss(1)+(Tbss(1)-Ttss(1))*zss(i)/dzss(1);     
+fprintf('==Temperature of South Sea Oceanic Plate ...\n');
+fprintf('== Done! == ...\n');
+filenameop5=strcat(data_tempdir,'C11-south sea sedment.txt');
+ocean5=load(filenameop5);  %
+filenameop6=strcat(data_tempdir,'C12-south sea crust.txt');
+ocean6=load(filenameop6);  % 
+filenameop7=strcat(data_tempdir,'C13-south sea lithospheric mantle.txt');
+ocean7=load(filenameop7);  % 
+filenameop8=strcat(data_tempdir,'C14-vertical weak zone.txt');
+ocean8=load(filenameop8);  %
+ssocean = [ocean5,ocean6,ocean7,ocean8]; %
+% Input Parameters
+kss  = [2.5,83.2]; % Thermal conductivity
+dzss = [60.e3,0];  % oceanic thickness(m)(sediment+crust+lithospheric mantle)
+Ttss = [273.,1573];% Temperature at top of layer(K)
+Tbss = [1573.,0];  % Temperature at base of layer(K)
+agess= 70;                 % Age of the oceanic plate(Ma:Million year)
+rhoss= [2900,3370];        % Density (kg/m^3)
+cpss = [750,750];          % Specific heat(J/kg*K)
+% 
+age_s_ss=agess*1.e6*365*24*60*60; % change unit 'Ma' into 's(second)';
+kaiss= kss./(rhoss.*cpss); 
+%  
+% z:depth,change surface z=600km to z=0; 
+% change depth to: bottom, y=max(Y);
+%                  top, y=0;
+zss = ysize*ones(1,length(ocean5)+length(ocean6)+length(ocean7)+...
+    length(ocean8))-ssocean(2,:);
+zmaxss=max(zss);
+zminss=min(zss);
+[mss,nss]=size(zss);      %
+bdepss =zss(nss);         % depth of model
+for i=1:nss
+       %Tdep(i) = Tt(1)+(Tb(1)-Tt(1))*erf(z(i)/(2*sqrt(kai(1)*age_s)));     
+       Tdepss(i) = Ttss(1)+(Tbss(1)-Ttss(1))*zss(i)/dzss(1);     
 
-% end
+end
 %%
 %======== T of right oceanic plate (Philippine Sea)================ 
 fprintf('==Temperature of Philippine Sea Oceanic Plate ...\n')
@@ -301,8 +299,7 @@ end
 %------------
 % Tdepmax =max(Tdep);
 % Tdepmin =min(Tdep);
-% oplateT=[leftocean,ssocean,psocean,paocean;Tdepleft,Tdepss,Tdepps,Tdeppa];
-oplateT=[leftocean,psocean,paocean;Tdepleft,Tdepps,Tdeppa];
+oplateT=[leftocean,ssocean,psocean,paocean;Tdepleft,Tdepss,Tdepps,Tdeppa];
 filenameopT=strcat(data_tempdir,'T of oceanic plate.txt');
 dlmwrite(filenameopT,oplateT,'delimiter','\t','precision','%8.6f');
 %
@@ -339,7 +336,6 @@ l2='# Only next line is parsed in format: [nx] [ny] because of keyword "POINTS:"
 %l3='# POINTS: 1001 331';
 l4='# Columns: x y temperature [K]';
 fprintf(fid,'%s\n',l1,l2,l3,l4);
-% fprintf(fid,'%8.6f\t', Tsortxy);
 fclose(fid);
 dlmwrite(filenametotal,Tsortxy,'-append','delimiter','\t','precision','%8.6f');
 %dlmwrite(filenametotal,Tsortxy,'-append','delimiter','\t','precision','%6.0f');

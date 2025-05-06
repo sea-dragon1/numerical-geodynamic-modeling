@@ -10,8 +10,6 @@ Run main to get both compositional field and temperature data.
 
 2. Continental Plate thickness 120km(25+10+85), Ocean Plate thickness 90km(4+8+varies), weak zone width 10km,  bottom of lithosphere 1300˚C.
 
-3. South China Sea: ocean plate or continent plate
-
 ##############################
 1.mt1: 20250414: 3 weak zone, left and right dipping angle 45˚, middle dipping angle 90˚, Moho(continent)550˚C;
 
