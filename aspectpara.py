@@ -130,8 +130,10 @@ Angles_internal_friction_dict = {'upper mantle': 30.00, 'plasticstrain': 30.00, 
 Cohesions_dict = {'upper mantle': 20.e6, 'plasticstrain': 20.e6, 'cuc': 20.e6, 'clc': 20.e6, 'cm': 20.e6,
                   'sediment': 10.e6, 'oc': 10.e6, 'om': 20.e6, 'wz': 10.e6, 'lowermantle': 4.e6}
 
-component_names = ['upper mantle', 'cuc', 'clc', 'cm', 'sediment', 'oc', 'om', 'wz' ,'cuc', 'clc', 'cm', 'cuc', 'clc', 'cm', 'wz', 'sediment', 'oc', 'om', 'wz', 'sediment', 'oc', 'om', 'plasticstrain']
+# component_names = ['upper mantle', 'cuc', 'clc', 'cm', 'sediment', 'oc', 'om', 'wz' ,'cuc', 'clc', 'cm', 'cuc', 'clc', 'cm', 'wz', 'sediment', 'oc', 'om', 'wz', 'sediment', 'oc', 'om', 'plasticstrain']
 # component_names = ['upper mantle', 'plasticstrain', 'cuc', 'clc', 'cm', 'sediment', 'oc', 'om', 'wz' ,'cuc', 'clc', 'cm', 'sediment', 'oc', 'om', 'wz', 'sediment', 'oc', 'om', 'wz', 'sediment', 'oc', 'om']
-
+# t13
+component_names = ['upper mantle', 'cuc', 'clc', 'cm', 'sediment', 'oc', 'om', 'wz' ,'cuc', 'clc', 'cm', 'cuc', 'clc', 'cm', 'wz', 'sediment', 'oc', 'om', 'wz', 'sediment', 'oc', 'om', 'plasticstrain']
+#　        # mantle, luc, llc, lmc, lsed, loc, lom, lwk, muc, mlc, mmc, scuc, sclc, scmc, rwk, rsed, roc, rom, rrwk, rrsed, rroc, rrmc, plastic_strain
 aspect_parameter(component_names)
 print('component_length:', len(component_names))

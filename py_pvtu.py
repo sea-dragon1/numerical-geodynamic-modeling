@@ -13,6 +13,7 @@ import gc
 
 # 加载 .pvtu 文件
 
+# 绘制单个标量物理场数据的函数
 def plot_field(dataset, field, field_name, save_path, number):
 
     # 创建一个渲染窗口
@@ -151,6 +152,7 @@ def clean_composition_data(dataset, field, method='auto_threshold'):
     
     return mask, lower_threshold, upper_threshold
 
+# 绘制组分场的函数
 def plot_composition(dataset, field_name, save_path, number):
 
     # 创建一个Plotter对象
@@ -286,224 +288,7 @@ def plot_composition(dataset, field_name, save_path, number):
     plotter.show()
     plotter.close() 
 
-def plot_viscosity_velocity(dataset, viscosity, velocity, field_name, save_path, number):
-    # 创建一个渲染窗口
-    
-    # plotter = pv.Plotter(window_size=(1000, 200), off_screen=True)
-
-    # # 选择要可视化的点（每隔10个点选择一个）
-    # stride = 50
-
-    # # 选取新的 points
-    # new_points = dataset.points[::stride]
-
-    # # 选取新的 velocity 数据
-    # velocity = dataset['velocity']
-    # new_velocity = velocity[::stride]
-
-    # # 创建新的 UnstructuredGrid 对象
-    # dataset_stride = pv.UnstructuredGrid()
-    # dataset_stride.points = new_points
-    # dataset_stride['velocity'] = new_velocity
-
-    # print(f"数据集点数: {dataset.n_points}")
-    # print(f"速度数据形状: {dataset['velocity'].shape}")
-    # print(f"速度范围: [{dataset['velocity'].min()}, {dataset['velocity'].max()}]")
-
-    # # 创建箭头表示速度场
-    # arrows = pv.Arrow()
-    # glyphs = dataset_stride.glyph(orient='velocity', scale=1.0, factor=1.0, geom=arrows)
-    # plotter.add_mesh(glyphs,label='Velocity',cmap='viridis')
-
-    # # 添加数据到渲染窗口，手动设置数据范围
-    # # plotter.add_mesh(dataset, scalars=viscosity, clim=[viscosity.min(), viscosity.max()], cmap='coolwarm',show_scalar_bar=False, log_scale=True)
-    # # 添加颜色条
-    # # plotter.add_scalar_bar(
-    # #     title="viscosity",            # 颜色条的标题
-    # #     vertical = True,      # 垂直放置
-    # #     position_x=0.92,       # 颜色条的 x 位置（0 到 1 之间）
-    # #     position_y=0.3,       # 颜色条的 y 位置（0 到 1 之间）
-    # #     width=0.03,            # 颜色条的宽度（0 到 1 之间）
-    # #     height=0.5,          # 颜色条的高度（0 到 1 之间）
-    # #     label_font_size=12,   # 标签字体大小
-    # #     title_font_size=16    # 标题字体大小
-    # # )
-    # # 设置视图和相机位置
-    # plotter.view_xy()
-    # plotter.camera_position = 'xy'
-    # # plotter.add_legend()
-    # # 调整相机的缩放比例
-    # plotter.camera.zoom(4.2)  # 缩放比例，可以根据需要调整
-    # # plotter.save_graphic(save_path + r'\viscosity_velocity.svg')
-    # # plotter.save_graphic(save_path + r'\viscosity_velocity.pdf')
-    # # # 显示渲染窗口
-    # # # plotter.show()
-
-    # plotter.save_graphic(save_path + f'\\{number}_viscosity_velocity.svg')
-    # plotter.save_graphic(save_path + f'\\{number}_viscosity_velocity.pdf')
-    # plotter.screenshot(save_path + f'\\{number}_viscosity_velocity.png', transparent_background=True) # 保存为 PNG 格式,带透明度
-    # # # 显示渲染窗口
-    # # plotter.show(auto_close=True)
-
-    """
-    绘制2D速度场，修复箭头过大和保存问题
-    """
-    print(f"开始处理第 {number} 个时间步...")
-    
-    # 1. 确保保存目录存在
-    os.makedirs(save_path, exist_ok=True)
-    
-    # 2. 创建绘图器，使用离屏渲染
-    plotter = pv.Plotter(window_size=(1200, 800), off_screen=True)
-    
-    try:
-        # 3. 采样数据点
-        max_arrows = 500
-        total_points = dataset.n_points
-        stride = max(1, total_points // max_arrows)
-        
-        points = dataset.points[::stride]
-        velocity = dataset['velocity'][::stride]
-        
-        print(f"总点数: {total_points:,}")
-        print(f"采样后点数: {len(points)}")
-        
-        # 4. 计算速度幅度
-        velocity_mag = np.linalg.norm(velocity, axis=1)
-        print(f"速度幅度范围: [{velocity_mag.min():.3e}, {velocity_mag.max():.3e}]")
-        
-        # 5. 关键：将3D数据转换为2D
-        # 方法：只保留XY平面，忽略Z坐标
-        points_2d = points.copy()
-        points_2d[:, 2] = 0  # 将Z坐标设为0
-        
-        velocity_2d = velocity.copy()
-        velocity_2d[:, 2] = 0  # 将Z方向速度设为0
-        
-        # 6. 计算合适的箭头长度
-        bounds = dataset.bounds
-        x_range = bounds[1] - bounds[0]
-        y_range = bounds[3] - bounds[2]
-        
-        # 使用XY平面的对角线长度
-        diagonal_2d = np.sqrt(x_range**2 + y_range**2)
-        
-        # 计算缩放因子：让最大箭头长度约为对角线长度的 1/20
-        if velocity_mag.max() > 0:
-            # 使用速度幅度的平均值或中位数
-            avg_velocity = np.median(velocity_mag[velocity_mag > 0])
-            scale_factor = diagonal_2d / 40 / avg_velocity if avg_velocity > 0 else 0.01
-        else:
-            scale_factor = 0.01
-            
-        print(f"2D对角线长度: {diagonal_2d:.3f}")
-        print(f"速度中位数: {np.median(velocity_mag):.3e}")
-        print(f"缩放因子: {scale_factor:.3e}")
-        
-        # 7. 创建2D点集
-        dataset_2d = pv.PolyData(points_2d)
-        dataset_2d['velocity'] = velocity_2d
-        dataset_2d['velocity_mag'] = velocity_mag
-        
-        # 8. 创建简单的箭头几何体（2D友好的设置）
-        arrow_geom = pv.Arrow(
-            tip_length=0.25,       # 箭头头部长度
-            tip_radius=0.08,       # 箭头头部半径
-            tip_resolution=20,     # 大幅增加头部分辨率
-            shaft_radius=0.04,     # 箭杆半径
-            shaft_resolution=20,   # 大幅增加箭杆分辨率
-        )
-        
-        # 9. 使用glyph创建箭头（避免add_arrows的错误）
-        # 使用scale=False和手动缩放
-        glyphs = dataset_2d.glyph(
-            orient='velocity',
-            scale=False,  # 不自动缩放
-            factor=scale_factor * 0.5,  # 进一步减小箭头
-            geom=arrow_geom,
-            tolerance=0.0
-        )
-        
-        # 10. 检查是否成功创建了箭头
-        if glyphs.n_points > 0:
-            print(f"成功创建 {glyphs.n_cells} 个箭头")
-            
-            # 添加箭头到绘图器
-            mesh = plotter.add_mesh(
-                glyphs,
-                scalars='velocity_mag',
-                cmap='viridis',
-                clim=[velocity_mag.min(), velocity_mag.max()],
-                show_scalar_bar=True,
-                scalar_bar_args={
-                    'title': 'Velocity Magnitude',
-                    'vertical': True,
-                    'position_x': 0.85,
-                    'position_y': 0.25,
-                    'width': 0.03,
-                    'height': 0.5,
-                    'label_font_size': 10,
-                    'title_font_size': 12,
-                    'fmt': '%.2e'  # 科学计数法显示
-                }
-            )
-        else:
-            print("警告：没有创建箭头几何体")
-            # 使用简单的线条作为备选
-            return plot_velocity_lines_2d(points_2d, velocity_2d, velocity_mag, scale_factor, 
-                                         save_path, number, plotter)
-        
-        # 11. 设置2D视图
-        plotter.view_xy()  # 设置为XY平面视图
-        plotter.camera_position = 'xy'  # 相机位置设置为XY平面
-        
-        # 确保是正投影（正交投影）而不是透视投影
-        plotter.camera.parallel_projection = True
-        
-        # 调整缩放
-        plotter.camera.zoom(1.5)  # 减小缩放值
-        
-        # 12. 设置背景为白色（不透明）
-        plotter.set_background('white')
-        
-        # 13. 保存图像
-        print("保存图像...")
-        
-        # 先保存PNG（最可靠）
-        png_path = os.path.join(save_path, f'{number}_velocity_2d.png')
-        plotter.screenshot(
-            png_path,
-            window_size=(1200, 400),
-            transparent_background=False,  # 不使用透明背景
-            return_img=False
-        )
-        print(f"PNG保存到: {png_path}")
-        
-        # 尝试保存SVG（如果失败可以忽略）
-        try:
-            svg_path = os.path.join(save_path, f'{number}_velocity_2d.svg')
-            plotter.save_graphic(svg_path)
-            print(f"SVG保存到: {svg_path}")
-        except Exception as e:
-            print(f"SVG保存失败（可忽略）: {str(e)[:50]}")
-        
-        # 尝试保存PDF
-        try:
-            pdf_path = os.path.join(save_path, f'{number}_velocity_2d.pdf')
-            plotter.save_graphic(pdf_path)
-            print(f"PDF保存到: {pdf_path}")
-        except Exception as e:
-            print(f"PDF保存失败（可忽略）: {str(e)[:50]}")
-        
-        print(f"第 {number} 个时间步处理完成\n")
-        return True
-        
-    except Exception as e:
-        print(f"处理第 {number} 个时间步时出错: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
+# matplotlib绘制速度场
 def resample_by_physical_distance(dataset, spacing=1000.0):
     """
     将数据集按等物理距离重新采样
@@ -571,7 +356,6 @@ def resample_by_physical_distance(dataset, spacing=1000.0):
         print(f"插值失败: {e}")
         # 如果插值失败，返回原始数据集
         return dataset
-
 def plot_with_equal_spacing(dataset, save_path, number, spacing_km=1.0):
     """使用等物理距离间距绘图"""
     
@@ -730,9 +514,7 @@ def plot_with_equal_spacing(dataset, save_path, number, spacing_km=1.0):
         import traceback
         traceback.print_exc()
         return False
-    
-
-def plot_velocity_final_solution(dataset, save_path, number, max_points=500):
+def plot_matplotlib_velocity_solution(dataset, save_path, number, max_points=500):
     """最终解决方案：使用matplotlib确保质量，修复不完整问题"""
 
     
@@ -880,6 +662,806 @@ def plot_velocity_final_solution(dataset, save_path, number, max_points=500):
         traceback.print_exc()
         return False
 
+# PyVista简化版本绘制速度场
+def plot_velocity_pyvista_simple(dataset, save_path, number, max_points=200):
+    """简化的PyVista实现，提高清晰度"""
+    
+    os.makedirs(save_path, exist_ok=True)
+    sample_method = 'physical_distance_center'  # 'physical_distance_max', 'physical_distance_center' or 'number_sacle'
+
+    try:
+        # 采样数据
+        if sample_method == 'number_sacle':
+            print("使用固定数量采样方法...")
+            total_points = dataset.n_points
+            stride = max(1, total_points // max_points) if total_points > max_points else 1
+            points = dataset.points[::stride]
+            velocity = dataset['velocity'][::stride]
+            
+        elif sample_method == 'physical_distance_max':
+            print("使用物理距离采样方法...")
+            
+            # 获取所有原始数据点
+            all_points = dataset.points
+            all_velocity = dataset['velocity']
+            
+            # 计算数据边界和范围
+            x_min, x_max = all_points[:, 0].min(), all_points[:, 0].max()
+            y_min, y_max = all_points[:, 1].min(), all_points[:, 1].max()
+            x_range = x_max - x_min
+            y_range = y_max - y_min
+            
+            # 计算采样距离 - 根据数据范围自动确定或使用固定值
+            if 'sample_distance' in locals():
+                # 如果外部传入了采样距离参数
+                grid_size = sample_distance
+            else:
+                # 自动计算采样距离
+                # 根据最大点数计算大致的采样距离
+                area = x_range * y_range
+                avg_distance = np.sqrt(area / max_points)
+                grid_size = avg_distance
+            
+            print(f"采样距离: {grid_size:.4f}")
+            
+            # 创建采样网格
+            x_edges = np.arange(x_min, x_max + grid_size, grid_size)
+            y_edges = np.arange(y_min, y_max + grid_size, grid_size)
+            
+            # 初始化存储列表
+            sampled_points = []
+            sampled_velocity = []
+            
+            # 方法1: 网格内速度最大点采样（推荐）
+            for i in range(len(x_edges) - 1):
+                for j in range(len(y_edges) - 1):
+                    # 定义当前网格
+                    x_low, x_high = x_edges[i], x_edges[i+1]
+                    y_low, y_high = y_edges[j], y_edges[j+1]
+                    
+                    # 找到网格内的所有点
+                    in_grid = (
+                        (all_points[:, 0] >= x_low) & (all_points[:, 0] < x_high) &
+                        (all_points[:, 1] >= y_low) & (all_points[:, 1] < y_high)
+                    )
+                    
+                    # 如果网格内有数据点
+                    if np.any(in_grid):
+                        grid_points = all_points[in_grid]
+                        grid_velocities = all_velocity[in_grid]
+                        
+                        # 选择速度最大的点作为代表
+                        grid_speeds = np.linalg.norm(grid_velocities, axis=1)
+                        max_idx = np.argmax(grid_speeds)
+                        
+                        sampled_points.append(grid_points[max_idx])
+                        sampled_velocity.append(grid_velocities[max_idx])
+            
+            # 转换为数组
+            points = np.array(sampled_points)
+            velocity = np.array(sampled_velocity)
+            
+            print(f"物理距离采样结果: {len(points)}个点")
+            
+            # 可选：如果没有采样到点，使用原始点
+            if len(points) == 0:
+                print("警告：物理距离采样未获得点，使用原始点")
+                points = all_points
+                velocity = all_velocity
+
+        elif sample_method == 'physical_distance_center':
+            print("使用物理距离采样方法...")
+            
+            all_points = dataset.points
+            all_velocity = dataset['velocity']
+            
+            # 计算数据边界和采样距离
+            x_min, x_max = all_points[:, 0].min(), all_points[:, 0].max()
+            y_min, y_max = all_points[:, 1].min(), all_points[:, 1].max()
+            x_range = x_max - x_min
+            y_range = y_max - y_min
+            
+            if 'sample_distance' in locals():
+                grid_size = sample_distance
+            else:
+                area = x_range * y_range
+                avg_distance = np.sqrt(area / max_points)
+                grid_size = avg_distance
+            
+            # 创建网格中心点
+            x_centers = np.arange(x_min + grid_size/2, x_max, grid_size)
+            y_centers = np.arange(y_min + grid_size/2, y_max, grid_size)
+            
+            # 创建KDTree进行最近邻搜索
+            from scipy.spatial import cKDTree
+            tree = cKDTree(all_points[:, :2])  # 只使用XY坐标
+            
+            # 生成所有网格中心
+            grid_centers = np.array([(x, y) for x in x_centers for y in y_centers])
+            
+            # 找到每个中心最近的点的索引
+            distances, indices = tree.query(grid_centers, distance_upper_bound=grid_size/2)
+            
+            # 过滤掉距离过远的点
+            valid_mask = distances < grid_size/2
+            
+            # 获取有效采样点
+            valid_indices = indices[valid_mask]
+            points = all_points[valid_indices]
+            velocity = all_velocity[valid_indices]
+
+        # 创建点云
+        if points.shape[1] == 2:
+            print("检测到2D数据，转换为3D...")
+            points_3d = np.column_stack((points, np.zeros(len(points))))
+            velocity_3d = np.column_stack((velocity, np.zeros(len(velocity))))
+        else:
+            points_3d = points
+            velocity_3d = velocity
+        
+        # 创建PolyData对象
+        point_cloud = pv.PolyData(points_3d)
+        point_cloud['velocity'] = velocity_3d
+        speed = np.linalg.norm(velocity, axis=1)
+        # 设置最大速度阈值
+        max_speed_allowed = np.percentile(speed, 80)  # 取95%分位数,缩小最大的速度
+        speed_clamped = np.minimum(speed, max_speed_allowed)
+        point_cloud['speed'] = speed_clamped
+        # point_cloud['speed'] = speed
+        
+        # 计算缩放因子
+        x_range = points[:, 0].max() - points[:, 0].min()
+        y_range = points[:, 1].max() - points[:, 1].min()
+        wind_x, wind_y = int(x_range//1000), int(y_range//1000)
+        print(f" wind_x, wind_y: {wind_x}, {wind_y}")
+        avg_range = (x_range + y_range) / 2
+        avg_speed = np.mean(speed[speed > 0]) if np.any(speed > 0) else 0.001
+        scale_factor = avg_range / (avg_speed * 30) if avg_speed > 0 else 0.1
+
+        # 创建箭头几何体（更简洁的设计）
+        arrow_geom = pv.Arrow(
+            tip_length=0.25,
+            tip_radius=0.08,
+            tip_resolution=12,
+            shaft_radius=0.03,
+            shaft_resolution=12
+        )
+
+        # 创建箭头
+        arrows = point_cloud.glyph(
+            orient='velocity',
+            scale='speed',
+            factor=scale_factor*0.5,  # **调整这个值：越大箭头越长**
+            geom=arrow_geom,
+            # tolerance=0.00001  # 忽略小箭头
+        )
+        
+        # 设置绘图器
+        plotter = pv.Plotter(
+            window_size=[wind_x, wind_y],
+            off_screen=True
+        )
+        
+        # 只添加箭头，使用颜色映射
+        plotter.add_mesh(
+            arrows,
+            # scalars='speed', # 使用颜色映射,速度大小指示箭头颜色
+            color='black',
+            # cmap='viridis',
+            show_scalar_bar=False,
+            # scalar_bar_args={
+            #     'title': 'Velocity Magnitude',
+            #     'title_font_size': 20,
+            #     'label_font_size': 16,
+            #     'shadow': True
+            # },
+            smooth_shading=True,
+            specular=0.5,
+            specular_power=30
+        )
+        
+        # 优化视图
+        plotter.view_xy()
+        plotter.camera_position = 'xy'
+        plotter.set_background('white')
+        
+        # 隐藏坐标轴
+        plotter.hide_axes()
+        
+        # 保存高分辨率图像
+        output_path = os.path.join(save_path, f'{number}_velocity_pyvista.png')
+        
+        # # 重置相机以确保设置生效
+        # plotter.reset_camera()
+
+        # # 轻微放大
+        # plotter.camera.zoom(4)
+        plotter.camera.tight()
+        # plotter.show_bounds(
+        #     grid='front',  # 显示边框线
+        #     location='outer',  # 边框位置
+        #     color='black',  # 边框颜色
+        # )
+        
+        plotter.screenshot(
+            output_path,
+            window_size=[wind_x, wind_y],
+            transparent_background=True
+        )
+        plotter.close()
+        
+        print(f"成功保存到: {output_path}")
+        return True
+        
+    except Exception as e:
+        print(f"错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+# 组分场与速度场联合绘制
+# def plot_combined_field(dataset, save_path, number, 
+#                        velocity_max_points=200, composition_opacity=0.7):
+#     """
+#     将速度场叠加在组分场上绘制
+    
+#     参数:
+#     - dataset: PyVista数据集
+#     - save_path: 保存路径
+#     - number: 图像编号
+#     - velocity_max_points: 速度场最大采样点数
+#     - composition_opacity: 组分场透明度 (0-1)
+#     """
+    
+#     os.makedirs(save_path, exist_ok=True)
+    
+#     try:
+#         # ============ 第一部分：绘制组分场（底图）============
+        
+#         # 定义标量场名称和颜色映射（与plot_composition相同）
+#         scalar_fields = ['lmc', 'loc', 'lom', 'muc', 'mlc', 'mmc', 'sclc', 
+#                          'scmc', 'roc', 'rom', 'rroc', 'rrmc', 'lwk', 'luc', 
+#                          'llc', 'scuc', 'rsed', 'rrsed', 'rrwk', 'rwk']
+        
+#         custom_colormap = {
+#             "uc": (0.92, 0.92, 0.96),  # 烟灰白
+#             "lc": (0.83, 0.82, 0.89),  # 淡藕灰
+#             "ed": (0.73, 0.71, 0.81),  # 灰藕色
+#             "oc": (0.62, 0.60, 0.72),  # 藕紫灰
+#             "mc": (0.51, 0.49, 0.63),  # 紫灰
+#             "om": (0.40, 0.38, 0.53),  # 深紫灰
+#             "wk": (0.96, 0.96, 0.98),  # 高光烟灰
+#             "bg": (0.90, 0.90, 0.94)   # 背景色
+#         }
+        
+#         # 创建Plotter对象（更大的窗口以容纳两种数据）
+#         plotter = pv.Plotter(
+#             window_size=[2400, 1800],
+#             off_screen=True
+#         )
+        
+#         # 添加半透明基础网格
+#         plotter.add_mesh(
+#             dataset, 
+#             color=custom_colormap['bg'], 
+#             opacity=0.3,  # 更透明的背景
+#             show_scalar_bar=False
+#         )
+        
+#         # 为每个组分添加掩膜可视化
+#         for i, field in enumerate(scalar_fields):
+#             # 提取后两位作为键
+#             key = field[-2:]
+            
+#             # 获取对应颜色
+#             color = custom_colormap.get(key, (0.18, 0.35, 0.55))
+            
+#             # 特殊处理某些字段的颜色
+#             if field == 'scuc':
+#                 color = custom_colormap['ed']
+#             elif field == 'sclc':
+#                 color = custom_colormap['oc']
+#             elif field == 'scmc' or field == 'rrmc':
+#                 color = custom_colormap['om']
+            
+#             # 使用改进的数据清洗方法
+#             mask, lower_thresh, upper_thresh = clean_composition_data(
+#                 dataset, field, method='physical_bounds'
+#             )
+            
+#             # 提取有效单元
+#             cell_ids = np.where(mask)[0]
+#             if len(cell_ids) == 0:
+#                 continue  # 跳过空场
+            
+#             # 提取并添加组分场
+#             masked_data = dataset.extract_cells(cell_ids)
+#             plotter.add_mesh(
+#                 masked_data,
+#                 color=color,
+#                 opacity=composition_opacity,  # 可调节透明度
+#                 label=field,
+#                 name=field,
+#                 show_scalar_bar=False  # 不显示颜色条，避免混乱
+#             )
+        
+#         # ============ 第二部分：绘制速度场（上层）============
+        
+#         # 使用物理距离采样方法
+#         all_points = dataset.points
+#         all_velocity = dataset['velocity']
+        
+#         # 计算数据边界和采样距离
+#         x_min, x_max = all_points[:, 0].min(), all_points[:, 0].max()
+#         y_min, y_max = all_points[:, 1].min(), all_points[:, 1].max()
+#         x_range = x_max - x_min
+#         y_range = y_max - y_min
+        
+#         # 计算采样距离
+#         area = x_range * y_range
+#         avg_distance = np.sqrt(area / velocity_max_points)
+#         grid_size = avg_distance
+        
+#         # 创建网格中心点
+#         x_centers = np.arange(x_min + grid_size/2, x_max, grid_size)
+#         y_centers = np.arange(y_min + grid_size/2, y_max, grid_size)
+        
+#         # 创建KDTree进行最近邻搜索
+#         from scipy.spatial import cKDTree
+#         tree = cKDTree(all_points[:, :2])  # 只使用XY坐标
+        
+#         # 生成所有网格中心
+#         grid_centers = np.array([(x, y) for x in x_centers for y in y_centers])
+        
+#         # 找到每个中心最近的点的索引
+#         distances, indices = tree.query(grid_centers, distance_upper_bound=grid_size/2)
+        
+#         # 过滤掉距离过远的点
+#         valid_mask = distances < grid_size/2
+        
+#         # 获取有效采样点
+#         valid_indices = indices[valid_mask]
+#         points = all_points[valid_indices]
+#         velocity = all_velocity[valid_indices]
+        
+#         # 转换为3D点云
+#         if points.shape[1] == 2:
+#             points_3d = np.column_stack((points, np.zeros(len(points))))
+#             velocity_3d = np.column_stack((velocity, np.zeros(len(velocity))))
+#         else:
+#             points_3d = points
+#             velocity_3d = velocity
+        
+#         # 创建点云和速度场数据
+#         point_cloud = pv.PolyData(points_3d)
+#         point_cloud['velocity'] = velocity_3d
+#         speed = np.linalg.norm(velocity, axis=1)
+        
+#         # 设置最大速度阈值
+#         max_speed_allowed = np.percentile(speed, 80)  # 取80%分位数
+#         speed_clamped = np.minimum(speed, max_speed_allowed)
+#         point_cloud['speed'] = speed_clamped
+        
+#         # 计算缩放因子
+#         avg_range = (x_range + y_range) / 2
+#         avg_speed = np.mean(speed[speed > 0]) if np.any(speed > 0) else 0.001
+#         scale_factor = avg_range / (avg_speed * 30) if avg_speed > 0 else 0.1
+        
+#         # 创建箭头几何体
+#         arrow_geom = pv.Arrow(
+#             tip_length=0.25,
+#             tip_radius=0.08,
+#             tip_resolution=12,
+#             shaft_radius=0.03,
+#             shaft_resolution=12
+#         )
+        
+#         # 创建箭头
+#         arrows = point_cloud.glyph(
+#             orient='velocity',
+#             scale='speed',
+#             factor=scale_factor * 0.5,  # 调整箭头长度
+#             geom=arrow_geom
+#         )
+        
+#         # 添加黑色箭头到plotter
+#         plotter.add_mesh(
+#             arrows,
+#             color='black',
+#             show_scalar_bar=False,
+#             smooth_shading=True,
+#             specular=0.5,
+#             specular_power=30
+#         )
+        
+#         # ============ 第三部分：视图设置和保存 ============
+        
+#         # 优化视图
+#         plotter.view_xy()
+#         plotter.camera_position = 'xy'
+#         plotter.set_background('white')
+        
+#         # 隐藏坐标轴
+#         plotter.hide_axes()
+        
+#         # 调整相机使图像紧贴
+#         plotter.camera.tight()
+#         plotter.camera.zoom(1.02)  # 轻微放大确保无白边
+        
+#         # 保存图像
+#         output_path = os.path.join(save_path, f'{number}_combined_field.png')
+#         plotter.screenshot(
+#             output_path,
+#             window_size=[2400, 1800],
+#             transparent_background=False
+#         )
+        
+#         # 可选：添加图例（如果需要）
+#         # 由于组分场没有颜色条，可以添加一个简单的文本图例
+#         legend_text = f"组分场 (透明度: {composition_opacity})\n速度场 (黑色箭头)"
+#         plotter.add_text(
+#             legend_text, 
+#             position='upper_left', 
+#             font_size=10, 
+#             color='black',
+#             font='arial'
+#         )
+        
+#         plotter.close()
+#         print(f"成功保存组合图像到: {output_path}")
+#         return True
+        
+#     except Exception as e:
+#         print(f"组合绘制错误: {e}")
+#         import traceback
+#         traceback.print_exc()
+#         return False
+def plot_combined_field(dataset, save_path, number, 
+                       velocity_max_points=200, composition_opacity=1.0):
+    """
+    将速度场叠加在组分场上绘制
+    
+    参数:
+    - dataset: PyVista数据集
+    - save_path: 保存路径
+    - number: 图像编号
+    - velocity_max_points: 速度场最大采样点数
+    - composition_opacity: 组分场透明度 (0-1)
+    """
+    
+    os.makedirs(save_path, exist_ok=True)
+    
+    try:
+        # ============ 设置全局主题允许空网格 ============
+        pv.global_theme.allow_empty_mesh = True
+        
+        # ============ 第一部分：绘制组分场（底图）============
+        
+        # 定义标量场名称和颜色映射
+        scalar_fields = ['lmc', 'loc', 'lom', 'muc', 'mlc', 'mmc', 'sclc', 
+                         'scmc', 'roc', 'rom', 'rroc', 'rrmc', 'lwk', 'luc', 
+                         'llc', 'scuc', 'rsed', 'rrsed', 'rrwk', 'rwk']
+        
+        custom_colormap = {
+            "uc": (0.92, 0.92, 0.96),  # 烟灰白
+            "lc": (0.83, 0.82, 0.89),  # 淡藕灰
+            "ed": (0.73, 0.71, 0.81),  # 灰藕色
+            "oc": (0.62, 0.60, 0.72),  # 藕紫灰
+            "mc": (0.51, 0.49, 0.63),  # 紫灰
+            "om": (0.40, 0.38, 0.53),  # 深紫灰
+            "wk": (0.96, 0.96, 0.98),  # 高光烟灰
+            "bg": (0.90, 0.90, 0.94)   # 背景色
+        }
+        
+        # 计算窗口大小（根据数据范围）
+        points = dataset.points
+        x_range = points[:, 0].max() - points[:, 0].min()
+        y_range = points[:, 1].max() - points[:, 1].min()
+        aspect_ratio = x_range / y_range
+        
+        # 设置窗口大小，保持数据宽高比
+        base_height = 1600
+        base_width = int(base_height * aspect_ratio)
+        window_size = [min(base_width, 3200), min(base_height, 2400)]
+        # window_size = [int(x_range)//100, int(y_range)//100] 
+        # # 绘制不出来 除以1000太小了数据范围: 4000000.0 x 663709.0, 宽高比: 6.03窗口大小: [40000, 6637]
+
+        print(f"数据范围: {x_range:.1f} x {y_range:.1f}, 宽高比: {aspect_ratio:.2f}")
+        print(f"窗口大小: {window_size}")
+        
+        # 创建Plotter对象
+        plotter = pv.Plotter(
+            window_size=window_size,
+            off_screen=True,
+            # lighting=True
+        )
+        
+        # 添加半透明基础网格 - 使用浅色背景
+        plotter.add_mesh(
+            dataset, 
+            color=custom_colormap['bg'], 
+            opacity=0.15,  # 非常透明的背景，只作为参考
+            show_scalar_bar=False,
+            style='surface',
+            smooth_shading=True
+        )
+        
+        # 为每个组分添加掩膜可视化
+        added_fields = []
+        for i, field in enumerate(scalar_fields):
+            # 提取后两位作为键
+            key = field[-2:]
+            
+            # 获取对应颜色
+            color = custom_colormap.get(key, (0.18, 0.35, 0.55))
+            
+            # 特殊处理某些字段的颜色
+            if field == 'scuc':
+                color = custom_colormap['ed']
+            elif field == 'sclc':
+                color = custom_colormap['oc']
+            elif field == 'scmc' or field == 'rrmc':
+                color = custom_colormap['om']
+            
+            # 使用改进的数据清洗方法
+            mask, lower_thresh, upper_thresh = clean_composition_data(
+                dataset, field, method='physical_bounds'
+            )
+            
+            # 提取有效单元 - 使用extract_points而不是extract_cells
+            point_indices = np.where(mask)[0]
+            if len(point_indices) == 0:
+                print(f"跳过 {field}: 没有有效单元 (阈值: [{lower_thresh:.4f}, {upper_thresh:.4f}])")
+                continue  # 跳过空场
+            
+            # 提取并添加组分场
+            try:
+                # 使用extract_points提取点数据
+                masked_data = dataset.extract_points(point_indices)
+                
+                # 检查提取的网格是否为空
+                if masked_data.n_points == 0:
+                    print(f"警告: {field} 提取的网格为空，跳过绘制")
+                    continue
+                
+                # 添加组分场到图表 - 使用点模式显示
+                plotter.add_mesh(
+                    masked_data,
+                    color=color,
+                    opacity=composition_opacity,
+                    label=field,
+                    name=field,
+                    show_scalar_bar=False,
+                    point_size=3.0,  # 控制点的大小
+                    render_points_as_spheres=True,  # 点显示为球体
+                    style='points'  # 使用点模式
+                )
+                
+                added_fields.append(field)
+                print(f"成功添加 {field}: {len(point_indices)} 个有效点")
+                
+            except Exception as e:
+                print(f"处理 {field} 时出错: {e}")
+                continue
+        
+        print(f"总共添加了 {len(added_fields)} 个组分场: {added_fields}")
+        
+        # ============ 第二部分：绘制速度场（上层）============
+        
+        # 检查速度场数据是否存在
+        if 'velocity' not in dataset.array_names:
+            print("警告: 数据集不包含速度场")
+        else:
+            try:
+                print("开始绘制速度场...")
+                
+                # 获取所有点数据
+                all_points = dataset.points
+                all_velocity = dataset['velocity']
+                
+                # 计算采样距离
+                x_min, x_max = all_points[:, 0].min(), all_points[:, 0].max()
+                y_min, y_max = all_points[:, 1].min(), all_points[:, 1].max()
+                x_range = x_max - x_min
+                y_range = y_max - y_min
+                
+                # 计算采样距离 - 确保有足够的采样点
+                area = x_range * y_range
+                desired_points = min(velocity_max_points, int(area / 100))  # 根据面积调整
+                avg_distance = np.sqrt(area / desired_points)
+                grid_size = max(avg_distance, x_range/100, y_range/100)  # 确保网格不会太小
+                
+                print(f"速度场采样距离: {grid_size:.1f}, 期望点数: {desired_points}")
+                
+                # 简单采样方法：等间距采样
+                total_points = dataset.n_points
+                sample_step = max(1, total_points // desired_points)
+                
+                # 确保采样步长不会太大
+                sample_step = min(sample_step, total_points // 50)
+                
+                # 采样点
+                points = all_points[::sample_step]
+                velocity = all_velocity[::sample_step]
+                
+                # 如果采样点太少，尝试更密集的采样
+                if len(points) < 10:
+                    sample_step = max(1, total_points // 100)
+                    points = all_points[::sample_step]
+                    velocity = all_velocity[::sample_step]
+                
+                print(f"实际采样点数: {len(points)}")
+                
+                # 转换为3D点云
+                if points.shape[1] == 2:
+                    points_3d = np.column_stack((points, np.zeros(len(points))))
+                    velocity_3d = np.column_stack((velocity, np.zeros(len(velocity))))
+                else:
+                    points_3d = points
+                    velocity_3d = velocity
+                
+                # 创建点云和速度场数据
+                point_cloud = pv.PolyData(points_3d)
+                point_cloud['velocity'] = velocity_3d
+                speed = np.linalg.norm(velocity, axis=1)
+                
+                # 设置速度阈值 - 避免极低速箭头太大问题
+                min_speed = np.percentile(speed[speed > 0], 20) if np.any(speed > 0) else 0.001
+                max_speed = np.percentile(speed, 95)  # 取95%分位数
+                
+                # 限制速度范围
+                speed_clamped = np.clip(speed, min_speed, max_speed)
+                
+                # 归一化速度
+                if max_speed > min_speed:
+                    speed_normalized = (speed_clamped - min_speed) / (max_speed - min_speed)
+                    speed_scaled = 0.1 + 0.9 * speed_normalized  # 范围0.1-1.0
+                else:
+                    speed_scaled = np.ones_like(speed_clamped) * 0.5
+                
+                point_cloud['speed'] = speed_scaled
+                
+                # 计算缩放因子 - 使箭头大小适中
+                avg_range = (x_range + y_range) / 2
+                avg_speed = np.mean(speed_scaled)
+                scale_factor = avg_range / (avg_speed * 25) if avg_speed > 0 else 0.1
+                
+                print(f"速度范围: {min_speed:.3f} - {max_speed:.3f}, 缩放因子: {scale_factor:.3f}")
+                
+                # 创建更简洁的箭头几何体
+                arrow_geom = pv.Arrow(
+                    tip_length=0.2,
+                    tip_radius=0.06,
+                    tip_resolution=10,
+                    shaft_radius=0.025,
+                    shaft_resolution=10
+                )
+                
+                # 创建箭头
+                arrows = point_cloud.glyph(
+                    orient='velocity',
+                    scale='speed',
+                    factor=scale_factor * 0.7,  # 调整箭头长度
+                    geom=arrow_geom,
+                    tolerance=0.0001  # 忽略非常小的箭头
+                )
+                
+                # 检查箭头网格是否为空
+                if arrows.n_points > 0:
+                    # 添加黑色箭头到plotter
+                    plotter.add_mesh(
+                        arrows,
+                        color='black',
+                        show_scalar_bar=False,
+                        smooth_shading=True,
+                        specular=0.3,
+                        specular_power=15,
+                        ambient=0.5,
+                        diffuse=0.8
+                    )
+                    print(f"成功添加速度场箭头: {arrows.n_points} 个箭头")
+                else:
+                    print("警告: 速度场箭头网格为空，尝试更宽松的容差")
+                    # 尝试不使用容差
+                    arrows = point_cloud.glyph(
+                        orient='velocity',
+                        scale='speed',
+                        factor=scale_factor * 0.7,
+                        geom=arrow_geom
+                    )
+                    if arrows.n_points > 0:
+                        plotter.add_mesh(
+                            arrows,
+                            color='black',
+                            show_scalar_bar=False,
+                            smooth_shading=True
+                        )
+                        print(f"成功添加速度场箭头: {arrows.n_points} 个箭头")
+                    
+            except Exception as e:
+                print(f"速度场绘制出错: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        # ============ 第三部分：视图设置和保存 ============
+        
+        print("调整视图设置...")
+        
+        # 设置视图为XY平面
+        plotter.view_xy()
+        
+        # 设置相机位置 - 正上方看XY平面
+        plotter.camera_position = [
+            [(x_min + x_max)/2, (y_min + y_max)/2, max(x_range, y_range)],  # 相机位置
+            [(x_min + x_max)/2, (y_min + y_max)/2, 0],  # 焦点位置
+            [0, 1, 0]  # 上方向
+        ]
+        
+        # 设置正交投影
+        plotter.camera.parallel_projection = True
+
+        # 添加完所有 mesh 后，直接 tight
+        # plotter.reset_camera()      # 先重置
+        # plotter.camera.tight()      # 自动计算最佳 parallel_scale
+
+        # 不要再手动设置 parallel_scale 或多次 reset
+        # 隐藏坐标轴
+        plotter.hide_axes()
+        
+        # 设置背景为白色
+        plotter.set_background('white')
+        
+        # 添加时间标签
+        plotter.add_text(
+            f"Time: {number}",
+            position='upper_left',
+            font_size=14,
+            color='black',
+            font='arial'
+        )
+        
+        # 添加图例说明
+        legend_text = f"组分场 (透明度: {composition_opacity})\n速度场 (黑色箭头)"
+        plotter.add_text(
+            legend_text, 
+            position='upper_right', 
+            font_size=10, 
+            color='black',
+            font='arial'
+        )
+        
+        # 保存图像
+        output_path = os.path.join(save_path, f'{number}_combined_field.png')
+        print(f"保存图像到: {output_path}")
+        
+        # 截图 - 使用透明背景
+        plotter.screenshot(
+            output_path,
+            # window_size=window_size,
+            transparent_background=False  # 使用白色背景
+        )
+        
+        # 保存SVG格式（可选）
+        try:
+            svg_path = os.path.join(save_path, f'{number}_combined_field.svg')
+            plotter.save_graphic(svg_path, raster=True, painter=True)
+            print(f"同时保存SVG到: {svg_path}")
+        except Exception as e:
+            print(f"SVG保存失败: {e}")
+        
+        # 关闭plotter
+        plotter.close()
+        print(f"成功保存组合图像到: {output_path}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"组合绘制错误: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+            
+# 主函数，处理多个时间步和字段
 def plt_pvtu(file_name, time_steps, field_names, args):
     file_path = file_name.format(model=args.model, velocity=args.velocity)
 
@@ -943,7 +1525,10 @@ def plt_pvtu(file_name, time_steps, field_names, args):
                 plot_composition(dataset, field_name, save_path, number)
             elif field_name == 'velocity':
                 # plot_viscosity_velocity(dataset, viscosity=point_data["viscosity"], velocity=point_data["velocity"], field_name=field_name, save_path=save_path, number=number)
-                plot_with_equal_spacing(dataset, save_path, number)
+                # plot_with_equal_spacing(dataset, save_path, number)
+                # plot_velocity_pyvista_simple(dataset, save_path, number)  
+                # plot_matplotlib_velocity_solution(dataset, save_path, number, max_points=500)
+                plot_combined_field(dataset, save_path, number, velocity_max_points=200, composition_opacity=0.6)
             else:
                 field = point_data[field_name]
                 plot_field(dataset, field, field_name, save_path, number)
@@ -968,7 +1553,7 @@ def main():
     time_steps = ['00000','00050', '00100', '00150', '00180',  '00200', '00230','00249']
     # time_steps = ['00137', '00138', '00139', '00140']
     field_names = ['T', 'viscosity', 'strain_rate'] # 'composition',  ['T', 'viscosity', 'strain_rate']  # T, viscosity, strain_rate等场数据名称
-    field_names = ['composition']
+    # field_names = ['composition']
     field_names = ['velocity']
 
     for path in paths:
