@@ -921,7 +921,7 @@ def plot_combined_field(dataset, save_path, fields, number,
     # 设置窗口大小，保持数据宽高比
     base_height = 1600
     base_width = int(base_height * aspect_ratio)
-    window_size = [min(base_width, 3200), 534] #
+    window_size = [min(base_width, 3200)*2, 534*2] #
     # window_size = [int(x_range)//100, int(y_range)//100] 
     # # 绘制不出来 除以1000太小了数据范围: 4000000.0 x 663709.0, 宽高比: 6.03窗口大小: [40000, 6637]
 
@@ -933,8 +933,8 @@ def plot_combined_field(dataset, save_path, fields, number,
         window_size=window_size,
         off_screen=True
     )
-    
-
+    plotter.ren_win.SetMultiSamples(16)  # 可选值: 0（关闭）, 2, 4, 8, 16
+    plotter.enable_anti_aliasing('fxaa')
     
     try:
         # ============ 设置全局主题允许空网格 ============
@@ -956,6 +956,17 @@ def plot_combined_field(dataset, save_path, fields, number,
                 "om": (0.40, 0.38, 0.53),  # 深紫灰
                 "wk": (0.96, 0.96, 0.98),  # 高光烟灰
                 "bg": (0.90, 0.90, 0.94)   # 背景色
+            }
+
+            custom_colormap = {
+                "uc": (0.92, 0.85, 0.74),  # 浅米色 - 更明亮的颜色，便于突出显示
+                "lc": (0.67, 0.83, 0.90),  # 蓝绿色 - 明亮且与浅米色形成良好对比
+                "ed": (0.72, 0.53, 0.42),  # 紫灰色 - 增加饱和度以提高可见性
+                "oc": (0.34, 0.73, 0.50),  # 深蓝色 - 强烈对比于其他颜色
+                "mc": (0.55, 0.65, 0.80),  # 大陆岩石圈地幔 - 柔和钢蓝
+                "om": (0.35, 0.45, 0.65),  # 大洋岩石圈地幔 - 深海军蓝
+                "wk": (0.99, 0.96, 0.91),  # 极浅米色 - 作为背景或强调区域
+                "bg": (0.85, 0.85, 0.85)   # 中灰 - 轻微加深的背景色，以增强整体对比度
             }
             
             # 添加半透明基础网格 - 使用浅色背景
@@ -1200,7 +1211,7 @@ def plot_combined_field(dataset, save_path, fields, number,
                     arrows = point_cloud.glyph(
                         orient='velocity',
                         scale='speed',
-                        factor=scale_factor * 0.7,  # 调整箭头长度
+                        factor=scale_factor * 0.2,  # 调整箭头长度
                         geom=arrow_geom,
                         tolerance=0.0001  # 忽略非常小的箭头
                     )
@@ -1242,7 +1253,40 @@ def plot_combined_field(dataset, save_path, fields, number,
                     import traceback
                     traceback.print_exc()
         
-        # ============ 第三部分：视图设置和保存 ============
+        # ============ 第三部分：绘制等温线 ============
+        if 'T' in fields:
+            try:
+                print("开始绘制等温线...")
+                # 提取温度场数据
+                if 'T' not in dataset.array_names:
+                    print("警告: 数据集不包含温度场")
+                else:
+                    temperature = dataset['T']
+                    # 定义等温线值（根据数据范围自动确定）
+                    temp_min, temp_max = temperature.min(), temperature.max()
+                    levels = np.linspace(temp_min, temp_max, num=6)  # 10条等温线
+                    levels = [573, 773, 973, 1173, 1373, 1550]
+                    
+                    # 创建等温线网格
+                    contours = dataset.contour(isosurfaces=levels, scalars='T')
+                    
+                    # 添加等温线到plotter
+                    plotter.add_mesh(
+                        contours,
+                        color='blue',
+                        line_width=0.5,
+                        show_scalar_bar=False,
+                        smooth_shading=True,
+                        specular=0.5,
+                        specular_power=20
+                    )
+                    print(f"成功添加等温线: {contours.n_lines} 条")
+            except Exception as e:
+                print(f"等温线绘制出错: {e}")
+                import traceback
+                traceback.print_exc()
+
+        # ============ 第四部分：视图设置和保存 ============
 
         print("调整视图设置...")
 
@@ -1290,7 +1334,8 @@ def plot_combined_field(dataset, save_path, fields, number,
         plotter.screenshot(
             output_path,
             window_size=window_size,  # 使用之前计算的窗口大小
-            transparent_background=False  # 使用白色背景
+            transparent_background=False,  # 使用白色背景
+            #  anti_aliasing=True  # 启用抗锯齿
         )
         
         # 保存SVG格式（可选）
@@ -1380,7 +1425,7 @@ def plt_pvtu(file_name, time_steps, field_names, args):
                 # plot_with_equal_spacing(dataset, save_path, number)
                 plot_velocity_pyvista_simple(dataset, save_path, number)  
                 # plot_matplotlib_velocity_solution(dataset, save_path, number, max_points=500)
-            elif isinstance(field_name, list) and set(field_name) <= set(point_data.keys()):
+            elif isinstance(field_name, list):
                 plot_combined_field(dataset, save_path, field_name, number, velocity_max_points=200, composition_opacity=0.6)
             else:
                 field = point_data[field_name]
@@ -1407,8 +1452,8 @@ def main():
     # time_steps = ['00137', '00138', '00139', '00140']
     field_names = ['T', 'viscosity', 'strain_rate', ["composition", "velocity", "T"]] # 'composition',  ['T', 'viscosity', 'strain_rate']  # T, viscosity, strain_rate等场数据名称
     # field_names = ['composition']
-    field_names = ['velocity']
     com_fields =["composition", "velocity", "T"]
+    field_names = [com_fields]
 
     for path in paths:
         plt_pvtu(file_name=path + r'\solution', time_steps=time_steps, field_names=field_names, args=args)
