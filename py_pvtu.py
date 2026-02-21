@@ -899,223 +899,6 @@ def plot_velocity_pyvista_simple(dataset, save_path, number, max_points=200):
         traceback.print_exc()
         return False
 
-# 组分场与速度场联合绘制
-# def plot_combined_field(dataset, save_path, number, 
-#                        velocity_max_points=200, composition_opacity=0.7):
-#     """
-#     将速度场叠加在组分场上绘制
-    
-#     参数:
-#     - dataset: PyVista数据集
-#     - save_path: 保存路径
-#     - number: 图像编号
-#     - velocity_max_points: 速度场最大采样点数
-#     - composition_opacity: 组分场透明度 (0-1)
-#     """
-    
-#     os.makedirs(save_path, exist_ok=True)
-    
-#     try:
-#         # ============ 第一部分：绘制组分场（底图）============
-        
-#         # 定义标量场名称和颜色映射（与plot_composition相同）
-#         scalar_fields = ['lmc', 'loc', 'lom', 'muc', 'mlc', 'mmc', 'sclc', 
-#                          'scmc', 'roc', 'rom', 'rroc', 'rrmc', 'lwk', 'luc', 
-#                          'llc', 'scuc', 'rsed', 'rrsed', 'rrwk', 'rwk']
-        
-#         custom_colormap = {
-#             "uc": (0.92, 0.92, 0.96),  # 烟灰白
-#             "lc": (0.83, 0.82, 0.89),  # 淡藕灰
-#             "ed": (0.73, 0.71, 0.81),  # 灰藕色
-#             "oc": (0.62, 0.60, 0.72),  # 藕紫灰
-#             "mc": (0.51, 0.49, 0.63),  # 紫灰
-#             "om": (0.40, 0.38, 0.53),  # 深紫灰
-#             "wk": (0.96, 0.96, 0.98),  # 高光烟灰
-#             "bg": (0.90, 0.90, 0.94)   # 背景色
-#         }
-        
-#         # 创建Plotter对象（更大的窗口以容纳两种数据）
-#         plotter = pv.Plotter(
-#             window_size=[2400, 1800],
-#             off_screen=True
-#         )
-        
-#         # 添加半透明基础网格
-#         plotter.add_mesh(
-#             dataset, 
-#             color=custom_colormap['bg'], 
-#             opacity=0.3,  # 更透明的背景
-#             show_scalar_bar=False
-#         )
-        
-#         # 为每个组分添加掩膜可视化
-#         for i, field in enumerate(scalar_fields):
-#             # 提取后两位作为键
-#             key = field[-2:]
-            
-#             # 获取对应颜色
-#             color = custom_colormap.get(key, (0.18, 0.35, 0.55))
-            
-#             # 特殊处理某些字段的颜色
-#             if field == 'scuc':
-#                 color = custom_colormap['ed']
-#             elif field == 'sclc':
-#                 color = custom_colormap['oc']
-#             elif field == 'scmc' or field == 'rrmc':
-#                 color = custom_colormap['om']
-            
-#             # 使用改进的数据清洗方法
-#             mask, lower_thresh, upper_thresh = clean_composition_data(
-#                 dataset, field, method='physical_bounds'
-#             )
-            
-#             # 提取有效单元
-#             cell_ids = np.where(mask)[0]
-#             if len(cell_ids) == 0:
-#                 continue  # 跳过空场
-            
-#             # 提取并添加组分场
-#             masked_data = dataset.extract_cells(cell_ids)
-#             plotter.add_mesh(
-#                 masked_data,
-#                 color=color,
-#                 opacity=composition_opacity,  # 可调节透明度
-#                 label=field,
-#                 name=field,
-#                 show_scalar_bar=False  # 不显示颜色条，避免混乱
-#             )
-        
-#         # ============ 第二部分：绘制速度场（上层）============
-        
-#         # 使用物理距离采样方法
-#         all_points = dataset.points
-#         all_velocity = dataset['velocity']
-        
-#         # 计算数据边界和采样距离
-#         x_min, x_max = all_points[:, 0].min(), all_points[:, 0].max()
-#         y_min, y_max = all_points[:, 1].min(), all_points[:, 1].max()
-#         x_range = x_max - x_min
-#         y_range = y_max - y_min
-        
-#         # 计算采样距离
-#         area = x_range * y_range
-#         avg_distance = np.sqrt(area / velocity_max_points)
-#         grid_size = avg_distance
-        
-#         # 创建网格中心点
-#         x_centers = np.arange(x_min + grid_size/2, x_max, grid_size)
-#         y_centers = np.arange(y_min + grid_size/2, y_max, grid_size)
-        
-#         # 创建KDTree进行最近邻搜索
-#         from scipy.spatial import cKDTree
-#         tree = cKDTree(all_points[:, :2])  # 只使用XY坐标
-        
-#         # 生成所有网格中心
-#         grid_centers = np.array([(x, y) for x in x_centers for y in y_centers])
-        
-#         # 找到每个中心最近的点的索引
-#         distances, indices = tree.query(grid_centers, distance_upper_bound=grid_size/2)
-        
-#         # 过滤掉距离过远的点
-#         valid_mask = distances < grid_size/2
-        
-#         # 获取有效采样点
-#         valid_indices = indices[valid_mask]
-#         points = all_points[valid_indices]
-#         velocity = all_velocity[valid_indices]
-        
-#         # 转换为3D点云
-#         if points.shape[1] == 2:
-#             points_3d = np.column_stack((points, np.zeros(len(points))))
-#             velocity_3d = np.column_stack((velocity, np.zeros(len(velocity))))
-#         else:
-#             points_3d = points
-#             velocity_3d = velocity
-        
-#         # 创建点云和速度场数据
-#         point_cloud = pv.PolyData(points_3d)
-#         point_cloud['velocity'] = velocity_3d
-#         speed = np.linalg.norm(velocity, axis=1)
-        
-#         # 设置最大速度阈值
-#         max_speed_allowed = np.percentile(speed, 80)  # 取80%分位数
-#         speed_clamped = np.minimum(speed, max_speed_allowed)
-#         point_cloud['speed'] = speed_clamped
-        
-#         # 计算缩放因子
-#         avg_range = (x_range + y_range) / 2
-#         avg_speed = np.mean(speed[speed > 0]) if np.any(speed > 0) else 0.001
-#         scale_factor = avg_range / (avg_speed * 30) if avg_speed > 0 else 0.1
-        
-#         # 创建箭头几何体
-#         arrow_geom = pv.Arrow(
-#             tip_length=0.25,
-#             tip_radius=0.08,
-#             tip_resolution=12,
-#             shaft_radius=0.03,
-#             shaft_resolution=12
-#         )
-        
-#         # 创建箭头
-#         arrows = point_cloud.glyph(
-#             orient='velocity',
-#             scale='speed',
-#             factor=scale_factor * 0.5,  # 调整箭头长度
-#             geom=arrow_geom
-#         )
-        
-#         # 添加黑色箭头到plotter
-#         plotter.add_mesh(
-#             arrows,
-#             color='black',
-#             show_scalar_bar=False,
-#             smooth_shading=True,
-#             specular=0.5,
-#             specular_power=30
-#         )
-        
-#         # ============ 第三部分：视图设置和保存 ============
-        
-#         # 优化视图
-#         plotter.view_xy()
-#         plotter.camera_position = 'xy'
-#         plotter.set_background('white')
-        
-#         # 隐藏坐标轴
-#         plotter.hide_axes()
-        
-#         # 调整相机使图像紧贴
-#         plotter.camera.tight()
-#         plotter.camera.zoom(1.02)  # 轻微放大确保无白边
-        
-#         # 保存图像
-#         output_path = os.path.join(save_path, f'{number}_combined_field.png')
-#         plotter.screenshot(
-#             output_path,
-#             window_size=[2400, 1800],
-#             transparent_background=False
-#         )
-        
-#         # 可选：添加图例（如果需要）
-#         # 由于组分场没有颜色条，可以添加一个简单的文本图例
-#         legend_text = f"组分场 (透明度: {composition_opacity})\n速度场 (黑色箭头)"
-#         plotter.add_text(
-#             legend_text, 
-#             position='upper_left', 
-#             font_size=10, 
-#             color='black',
-#             font='arial'
-#         )
-        
-#         plotter.close()
-#         print(f"成功保存组合图像到: {output_path}")
-#         return True
-        
-#     except Exception as e:
-#         print(f"组合绘制错误: {e}")
-#         import traceback
-#         traceback.print_exc()
-#         return False
 def plot_combined_field(dataset, save_path, number, 
                        velocity_max_points=200, composition_opacity=1.0):
     """
@@ -1162,7 +945,7 @@ def plot_combined_field(dataset, save_path, number,
         # 设置窗口大小，保持数据宽高比
         base_height = 1600
         base_width = int(base_height * aspect_ratio)
-        window_size = [min(base_width, 3200), min(base_height, 2400)]
+        window_size = [min(base_width, 3200), 534] #
         # window_size = [int(x_range)//100, int(y_range)//100] 
         # # 绘制不出来 除以1000太小了数据范围: 4000000.0 x 663709.0, 宽高比: 6.03窗口大小: [40000, 6637]
 
@@ -1384,33 +1167,32 @@ def plot_combined_field(dataset, save_path, number,
                 traceback.print_exc()
         
         # ============ 第三部分：视图设置和保存 ============
-        
+
         print("调整视图设置...")
-        
+
         # 设置视图为XY平面
         plotter.view_xy()
-        
+
         # 设置相机位置 - 正上方看XY平面
         plotter.camera_position = [
             [(x_min + x_max)/2, (y_min + y_max)/2, max(x_range, y_range)],  # 相机位置
             [(x_min + x_max)/2, (y_min + y_max)/2, 0],  # 焦点位置
             [0, 1, 0]  # 上方向
         ]
-        
+
         # 设置正交投影
         plotter.camera.parallel_projection = True
 
-        # 添加完所有 mesh 后，直接 tight
-        # plotter.reset_camera()      # 先重置
-        # plotter.camera.tight()      # 自动计算最佳 parallel_scale
+        # 适度放大以减少白色边框
+        plotter.camera.zoom(6)  # 轻微放大，可根据需要调整
+        # plotter.camera.tight()  # 自动调整相机以适应数据范围
 
-        # 不要再手动设置 parallel_scale 或多次 reset
         # 隐藏坐标轴
         plotter.hide_axes()
-        
+
         # 设置背景为白色
         plotter.set_background('white')
-        
+
         # 添加时间标签
         plotter.add_text(
             f"Time: {number}",
@@ -1419,25 +1201,25 @@ def plot_combined_field(dataset, save_path, number,
             color='black',
             font='arial'
         )
-        
+
         # 添加图例说明
         legend_text = f"组分场 (透明度: {composition_opacity})\n速度场 (黑色箭头)"
         plotter.add_text(
-            legend_text, 
-            position='upper_right', 
-            font_size=10, 
+            legend_text,
+            position='upper_right',
+            font_size=10,
             color='black',
             font='arial'
         )
-        
+
         # 保存图像
         output_path = os.path.join(save_path, f'{number}_combined_field.png')
         print(f"保存图像到: {output_path}")
-        
-        # 截图 - 使用透明背景
+
+        # 截图 - 使用计算出的窗口大小以确保合适的比例
         plotter.screenshot(
             output_path,
-            # window_size=window_size,
+            window_size=window_size,  # 使用之前计算的窗口大小
             transparent_background=False  # 使用白色背景
         )
         
