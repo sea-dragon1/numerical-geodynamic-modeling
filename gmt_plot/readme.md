@@ -1,6 +1,6 @@
 # Numerical geodynamic modeling
-1. cfT: creat compostiob and T field with MATLAB for ASPECT
-2. GMT: 
+    1. cfT: creat compostiob and T field with MATLAB for ASPECT
+    2. GMT: 
 https://gmt-china.org/ 
 https://docs.gmt-china.org/latest/tutorial/get-started/windows/
 gmt vtu画图

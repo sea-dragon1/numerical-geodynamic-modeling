@@ -1,6 +1,6 @@
+# 绘制GIF动画，展示不同时间步的场数据变化
 import pyvista as pv
 from pyvista import PVDReader
-
 
 import xml.etree.ElementTree as ET
 import pyvista as pv

@@ -1,0 +1,2 @@
+./plot_gmt6.sh: line 62: printf: >: invalid number
+./plot_gmt6.sh: line 62: printf: -Z: invalid number

@@ -17,7 +17,7 @@ from pathlib import Path
 import os
 import xml.etree.ElementTree as ET
 import pandas as pd
-from fields import ASPECT_FIELDS, get_field_info
+from pvplot.fields import ASPECT_FIELDS, get_field_info
 
 # ================== 2. PVD 加载器 ==================
 def load_pvd(file_path):
